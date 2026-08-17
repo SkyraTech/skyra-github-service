@@ -43,6 +43,16 @@ try {
   console.error("Please ensure you set valid GITHUB_TOKEN and GITHUB_USERNAME in .env");
 }
 
+// ── GET / ────────────────────────────────────────────────────────────────
+app.get('/', (req: Request, res: Response) => {
+  res.json({
+    message: "Skyra-Tech GitHub Automation Microservice is online.",
+    documentation: "/health",
+    status: "active"
+  });
+});
+
+
 // ── GET /health ──────────────────────────────────────────────────────────
 app.get('/health', async (req: Request, res: Response) => {
   try {
