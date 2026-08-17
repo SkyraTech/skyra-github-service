@@ -12,29 +12,79 @@ export class GitHubService {
   }
 
   /**
-   * Create a new repository on user's GitHub account.
+   * Verify authenticated token status.
    */
-  async createRepo(name: string, description: string, isPrivate: boolean) {
+  async verifyToken() {
     try {
-      const response = await this.octokit.repos.createForAuthenticatedUser({
-        name,
-        description,
-        private: isPrivate,
-        auto_init: true, // Auto-create README.md
+      const response = await this.octokit.users.getAuthenticated();
+      return {
+        valid: true,
+        username: response.data.login,
+        scopes: response.headers['x-oauth-scopes'] || 'unknown'
+      };
+    } catch (error: any) {
+      return {
+        valid: false,
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * Get metadata for a single repository.
+   */
+  async getRepository(repoName: string, orgName?: string) {
+    try {
+      const owner = orgName || config.GITHUB_ORG || config.GITHUB_USERNAME;
+      const response = await this.octokit.repos.get({
+        owner,
+        repo: repoName
       });
       return response.data;
+    } catch (error: any) {
+      throw new Error(`Failed to fetch repository metadata: ${error.message}`);
+    }
+  }
+
+  /**
+   * Create a new repository on user's account or organization.
+   */
+  async createRepository(name: string, description: string, isPrivate: boolean, orgName?: string) {
+    try {
+      const targetOrg = orgName || config.GITHUB_ORG;
+      if (targetOrg) {
+        console.log(`🏢 Google Service: Creating repository '${name}' under Organization '${targetOrg}'`);
+        const response = await this.octokit.repos.createInOrg({
+          org: targetOrg,
+          name,
+          description,
+          private: isPrivate,
+          auto_init: true
+        });
+        return response.data;
+      } else {
+        console.log(`👤 Google Service: Creating repository '${name}' under User '${config.GITHUB_USERNAME}'`);
+        const response = await this.octokit.repos.createForAuthenticatedUser({
+          name,
+          description,
+          private: isPrivate,
+          auto_init: true, // Auto-create README.md
+        });
+        return response.data;
+      }
     } catch (error: any) {
       throw new Error(`Failed to create repository: ${error.message}`);
     }
   }
 
   /**
-   * Delete a repository from user's account.
+   * Delete a repository.
    */
-  async deleteRepo(name: string) {
+  async deleteRepo(name: string, orgName?: string) {
     try {
+      const owner = orgName || config.GITHUB_ORG || config.GITHUB_USERNAME;
       await this.octokit.repos.delete({
-        owner: config.GITHUB_USERNAME,
+        owner,
         repo: name,
       });
       return { success: true, message: `Repository ${name} deleted successfully.` };
@@ -46,10 +96,11 @@ export class GitHubService {
   /**
    * Add a collaborator to a repository.
    */
-  async addCollaborator(repoName: string, collaboratorUsername: string, permission: 'pull' | 'push' | 'admin' = 'push') {
+  async addCollaborator(repoName: string, collaboratorUsername: string, permission: 'pull' | 'push' | 'admin' = 'push', orgName?: string) {
     try {
+      const owner = orgName || config.GITHUB_ORG || config.GITHUB_USERNAME;
       const response = await this.octokit.repos.addCollaborator({
-        owner: config.GITHUB_USERNAME,
+        owner,
         repo: repoName,
         username: collaboratorUsername,
         permission,
@@ -61,17 +112,23 @@ export class GitHubService {
   }
 
   /**
-   * List all repositories owned by the user.
+   * List all repositories.
    */
-  async listRepos() {
+  async listRepositories(options?: { type?: 'all' | 'owner' | 'public' | 'private' | 'member'; sort?: 'created' | 'updated' | 'pushed' | 'full_name'; limit?: number }) {
     try {
+      const type = options?.type || 'all';
+      const sort = options?.sort || 'updated';
+      const limit = options?.limit || 50;
+
       const response = await this.octokit.repos.listForAuthenticatedUser({
-        affiliation: 'owner',
-        sort: 'updated',
-        per_page: 50,
+        visibility: type === 'public' || type === 'private' ? type : undefined,
+        affiliation: type === 'owner' ? 'owner' : undefined,
+        sort,
+        per_page: limit,
       });
       return response.data.map(repo => ({
         name: repo.name,
+        full_name: repo.full_name,
         url: repo.html_url,
         private: repo.private,
         description: repo.description,

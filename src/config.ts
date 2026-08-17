@@ -5,9 +5,10 @@ import path from 'path';
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 export const config = {
-  PORT: process.env.PORT || '8001',
+  PORT: parseInt(process.env.PORT || '8001', 10),
   GITHUB_TOKEN: process.env.GITHUB_TOKEN || '',
   GITHUB_USERNAME: process.env.GITHUB_USERNAME || '',
+  GITHUB_ORG: process.env.GITHUB_ORG || '',
   
   validate() {
     if (!this.GITHUB_TOKEN) {
