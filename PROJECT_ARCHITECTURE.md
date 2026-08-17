@@ -40,13 +40,16 @@
 apps/skyra-github-service/
 ├── package.json             ← Node package dependencies
 ├── tsconfig.json            ← TypeScript compiler configurations
+├── vercel.json              ← Vercel serverless function rewrite mappings
+├── api/
+│   └── index.ts             ← Vercel serverless adapter entry point
 ├── .env                     ← Service token configurations
 ├── .gitignore               ← Locked credentials rules
 └── src/
     ├── config.ts            ← Environment loader (port, user, org, scopes)
     ├── github.ts            ← GitHub API (Octokit organization vs user creations)
     ├── git.ts               ← Git operations (path resolution, lock cleanup)
-    └── index.ts             ← Express HTTP routes (CORS, loopback 127.0.0.1)
+    └── index.ts             ← Express HTTP routes (CORS, Vercel check)
 ```
 
 ### Lifecycle Scopes
@@ -56,6 +59,11 @@ apps/skyra-github-service/
 ---
 
 ## 4. Technical Specs & Feature Deep-Dive
+
+### Vercel Serverless Function Adaptation
+* **Routing Rewrites**: The root `vercel.json` rewrites all routing requests `/.*` to `/api/index.ts`.
+* **Serverless Entrypoint**: `api/index.ts` imports the Express application from `src/index.ts` and exports it as a default serverless function handler.
+* **Conditional Listener**: In `src/index.ts`, port listener `app.listen()` is conditionally bypassed if `process.env.VERCEL` is active, allowing seamless execution in serverless compute environments without port conflicts.
 
 ### API Endpoint Schemas
 
@@ -76,8 +84,7 @@ Returns server health metrics and verifies active Octokit authentication scopes.
   ```
 
 #### B. `/repos` (GET)
-Lists owned or affiliated repositories.
-* **Request Params**: `limit=10&sort=updated&type=owner`
+Lists repository metadata. Includes filter query overrides (`limit`, `sort`, `type`).
 * **Response Schema**:
   ```json
   {
@@ -86,11 +93,9 @@ Lists owned or affiliated repositories.
     "repos": [
       {
         "name": "skyra-jarvis",
-        "full_name": "SkyraTech/skyra-jarvis",
-        "url": "https://github.com/SkyraTech/skyra-jarvis",
+        "description": "Jarvis Orchestrator Core",
         "private": true,
-        "description": "Core assistant orchestrator",
-        "updated_at": "2026-08-17T12:00:00Z"
+        "html_url": "https://github.com/SkyraTech/skyra-jarvis"
       }
     ]
   }
@@ -167,8 +172,8 @@ Performs stage, commit, and push actions.
 ---
 
 ## 5. Security, Environment & Configuration
-* **Port Binding**: Port `8001`. Binds strictly to `127.0.0.1` (localhost).
-* **CORS Limits**: Origin allowed headers strictly mapped to `http://127.0.0.1:8000` and `http://localhost:8000`. Wildcard CORS `*` is forbidden.
+* **Port Binding**: Port `8001`. Binds strictly to `127.0.0.1` (localhost) when run locally. Bypassed in Vercel serverless environments.
+* **CORS Limits**: Origin allowed headers strictly restricted to local loopbacks (`http://127.0.0.1:8000` and `http://localhost:8000`) and custom deployment production domains. Wildcard CORS `*` is forbidden.
 * **Safe Arguments Parameterization**: Shell execution string concatenations are disabled. All remote clones and pushes delegate parameters safely via `simple-git` arrays.
 
 ---
@@ -181,4 +186,4 @@ Performs stage, commit, and push actions.
 ---
 
 ## 7. Ecosystem Integration & Dependencies
-Called by `skyra-jarvis` to automate version control updates, create backups, clone templates, and upload outputs. Exposes REST API over loopback port `8001`.
+Called by `skyra-jarvis` to automate version control updates, create backups, clone templates, and upload outputs. Exposes REST API over loopback port `8001` (local) or via HTTPS deployment URLs (Vercel cloud).
