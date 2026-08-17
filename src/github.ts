@@ -1,5 +1,10 @@
 import { config } from './config';
 
+// Dummy static statement to force Vercel's bundler to trace and package @octokit/rest, without executing it at runtime
+if (false) {
+  require('@octokit/rest');
+}
+
 export class GitHubService {
   private octokit: any = null;
   private initPromise: Promise<void>;
