@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skyra GitHub Service — API Test Suite</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;500;700&family=Fira+Code:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-base: #0a0a0f;
+            --panel-bg: rgba(20, 20, 30, 0.6);
+            --border-color: rgba(234, 179, 8, 0.15);
+            --yellow-glow: #eab308;
+            --blue-glow: #3b82f6;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --success-color: #10b981;
+            --error-color: #ef4444;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: var(--bg-base);
+            color: var(--text-primary);
+            font-family: 'Space Grotesk', sans-serif;
+            min-height: 100vh;
+            padding: 40px;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(234, 179, 8, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 40%);
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 20px;
+        }
+
+        h1 {
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 700;
+            font-size: 1.8rem;
+            letter-spacing: 1px;
+            background: linear-gradient(to right, var(--yellow-glow), #fb923c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .server-status {
+            font-size: 0.85rem;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.03);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid var(--border-color);
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background-color: var(--error-color);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--error-color);
+        }
+
+        .status-dot.online {
+            background-color: var(--success-color);
+            box-shadow: 0 0 8px var(--success-color);
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 24px;
+            backdrop-filter: blur(12px);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .panel-title {
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--yellow-glow);
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .btn-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        button {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-family: 'Space Grotesk', sans-serif;
+            font-weight: 500;
+            font-size: 0.95rem;
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        button:hover {
+            background: rgba(234, 179, 8, 0.08);
+            border-color: var(--yellow-glow);
+            transform: translateX(2px);
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        label {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        input {
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.9rem;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--yellow-glow);
+        }
+
+        .console-panel {
+            grid-column: 1 / -1;
+        }
+
+        .console-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .console-clear {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .console-clear:hover {
+            color: var(--yellow-glow);
+        }
+
+        pre {
+            background: #050508;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 20px;
+            height: 300px;
+            overflow: auto;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            line-height: 1.5;
+            color: #38bdf8;
+        }
+
+        .info-text {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Skyra GitHub Service API Tester</h1>
+            <div class="server-status">
+                <div class="status-dot" id="status-dot"></div>
+                <span id="status-text">Checking Connection...</span>
+            </div>
+        </header>
+
+        <div class="grid">
+            <!-- Left Panel: Read operations -->
+            <div class="panel">
+                <div class="panel-title">1. Connection & Info</div>
+                <p class="info-text">Verify that the local microservice can connect to GitHub and read your account details correctly.</p>
+                <div class="btn-group">
+                    <button onclick="testHealth()">Check Health Endpoint <span>→</span></button>
+                    <button onclick="listRepos()">List Active Repositories <span>→</span></button>
+                </div>
+            </div>
+
+            <!-- Right Panel: Actions -->
+            <div class="panel">
+                <div class="panel-title">2. Repository Actions</div>
+                <div class="input-group">
+                    <label for="repo-name">Repository Name</label>
+                    <input type="text" id="repo-name" value="skyra-test-automation" placeholder="e.g. skyra-test-repo">
+                </div>
+                <div class="btn-group">
+                    <button onclick="createRepo(false)" style="border-color: rgba(16, 185, 129, 0.3);">Create Public Repo <span>+</span></button>
+                    <button onclick="deleteRepo()" style="border-color: rgba(239, 68, 68, 0.3);">Delete Repo <span>🗑️</span></button>
+                </div>
+            </div>
+
+            <!-- Console Panel -->
+            <div class="console-panel panel">
+                <div class="console-header">
+                    <div class="panel-title" style="margin-bottom: 0;">Live Output Console</div>
+                    <span class="console-clear" onclick="clearConsole()">Clear Logs</span>
+                </div>
+                <pre id="output-console">// Logs will appear here...</pre>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const baseUrl = 'http://localhost:8001';
+        const consoleEl = document.getElementById('output-console');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+
+        // Check if server is running
+        async function checkServerStatus() {
+            try {
+                const response = await fetch(`${baseUrl}/health`);
+                if (response.ok) {
+                    statusDot.className = 'status-dot online';
+                    statusText.textContent = 'Service Online (Port 8001)';
+                } else {
+                    throw new Error();
+                }
+            } catch (e) {
+                statusDot.className = 'status-dot';
+                statusText.textContent = 'Service Offline (Please run run.bat)';
+            }
+        }
+
+        function log(message, data = null) {
+            const time = new Date().toLocaleTimeString();
+            let text = `[${time}] ${message}\n`;
+            if (data) {
+                text += JSON.stringify(data, null, 2) + '\n';
+            }
+            consoleEl.textContent = text + '\n' + consoleEl.textContent;
+        }
+
+        function clearConsole() {
+            consoleEl.textContent = '// Logs cleared...';
+        }
+
+        async function testHealth() {
+            log('Sending GET request to /health...');
+            try {
+                const res = await fetch(`${baseUrl}/health`);
+                const data = await res.json();
+                log('Response received:', data);
+                checkServerStatus();
+            } catch (e) {
+                log('ERROR: Connection failed. Ensure the server is running on port 8001.');
+            }
+        }
+
+        async function listRepos() {
+            log('Sending GET request to /repos...');
+            try {
+                const res = await fetch(`${baseUrl}/repos`);
+                const data = await res.json();
+                log('Response received:', data);
+            } catch (e) {
+                log('ERROR: Connection failed. Ensure server is running.');
+            }
+        }
+
+        async function createRepo() {
+            const name = document.getElementById('repo-name').value.trim();
+            if (!name) {
+                alert('Please enter a repository name.');
+                return;
+            }
+            log(`Sending POST request to /repos/create for name: ${name}...`);
+            try {
+                const res = await fetch(`${baseUrl}/repos/create`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, description: 'Created by Skyra Tester', isPrivate: false })
+                });
+                const data = await res.json();
+                log('Response received:', data);
+            } catch (e) {
+                log('ERROR: Repository creation failed.');
+            }
+        }
+
+        async function deleteRepo() {
+            const name = document.getElementById('repo-name').value.trim();
+            if (!name) {
+                alert('Please enter a repository name.');
+                return;
+            }
+            if (!confirm(`Are you sure you want to delete repository "${name}" on GitHub?`)) {
+                return;
+            }
+            log(`Sending POST request to /repos/delete for name: ${name}...`);
+            try {
+                const res = await fetch(`${baseUrl}/repos/delete`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name })
+                });
+                const data = await res.json();
+                log('Response received:', data);
+            } catch (e) {
+                log('ERROR: Repository deletion failed.');
+            }
+        }
+
+        // Initial check
+        setInterval(checkServerStatus, 5000);
+        checkServerStatus();
+    </script>
+</body>
+</html>
