@@ -1,14 +1,24 @@
-import { Octokit } from '@octokit/rest';
 import { config } from './config';
 
 export class GitHubService {
-  private octokit: Octokit;
+  private octokit: any = null;
+  private initPromise: Promise<void>;
 
   constructor() {
     config.validate();
+    this.initPromise = this.init();
+  }
+
+  private async init() {
+    // Force runtime dynamic ESM import evaluation to bypass TypeScript CommonJS transpile rewrite
+    const { Octokit } = await (eval('import("@octokit/rest")') as Promise<any>);
     this.octokit = new Octokit({
       auth: config.GITHUB_TOKEN,
     });
+  }
+
+  private async ensureInitialized() {
+    await this.initPromise;
   }
 
   /**
@@ -16,6 +26,7 @@ export class GitHubService {
    */
   async verifyToken() {
     try {
+      await this.ensureInitialized();
       const response = await this.octokit.users.getAuthenticated();
       return {
         valid: true,
@@ -35,6 +46,7 @@ export class GitHubService {
    */
   async getRepository(repoName: string, orgName?: string) {
     try {
+      await this.ensureInitialized();
       const owner = orgName || config.GITHUB_ORG || config.GITHUB_USERNAME;
       const response = await this.octokit.repos.get({
         owner,
@@ -51,6 +63,7 @@ export class GitHubService {
    */
   async createRepository(name: string, description: string, isPrivate: boolean, orgName?: string) {
     try {
+      await this.ensureInitialized();
       const targetOrg = orgName || config.GITHUB_ORG;
       if (targetOrg) {
         console.log(`🏢 Google Service: Creating repository '${name}' under Organization '${targetOrg}'`);
@@ -82,6 +95,7 @@ export class GitHubService {
    */
   async deleteRepo(name: string, orgName?: string) {
     try {
+      await this.ensureInitialized();
       const owner = orgName || config.GITHUB_ORG || config.GITHUB_USERNAME;
       await this.octokit.repos.delete({
         owner,
@@ -98,6 +112,7 @@ export class GitHubService {
    */
   async addCollaborator(repoName: string, collaboratorUsername: string, permission: 'pull' | 'push' | 'admin' = 'push', orgName?: string) {
     try {
+      await this.ensureInitialized();
       const owner = orgName || config.GITHUB_ORG || config.GITHUB_USERNAME;
       const response = await this.octokit.repos.addCollaborator({
         owner,
@@ -116,6 +131,7 @@ export class GitHubService {
    */
   async listRepositories(options?: { type?: 'all' | 'owner' | 'public' | 'private' | 'member'; sort?: 'created' | 'updated' | 'pushed' | 'full_name'; limit?: number }) {
     try {
+      await this.ensureInitialized();
       const type = options?.type || 'all';
       const sort = options?.sort || 'updated';
       const limit = options?.limit || 50;
@@ -126,7 +142,7 @@ export class GitHubService {
         sort,
         per_page: limit,
       });
-      return response.data.map(repo => ({
+      return response.data.map((repo: any) => ({
         name: repo.name,
         full_name: repo.full_name,
         url: repo.html_url,
